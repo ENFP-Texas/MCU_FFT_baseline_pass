@@ -306,5 +306,7 @@ Overall: PASS
 
 \* 扩展适合 FFT 的 MCU 指令，但仍保持 FFT 由 MCU 指令完成。
 
-
+\*asm/fft8_baseline.asm 是 MCU FFT 程序的人类可读汇编源文件。
+mem/instr_fft8.mem 和 mem/instr_fft8.coe 由 scripts/assembler.py 自动生成。
+后续优化应修改 ASM 源文件，不建议直接手改机器码。
 
