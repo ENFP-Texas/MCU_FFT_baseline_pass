@@ -10,30 +10,49 @@ module board_top(
     output wire LED7,
     output wire LED8
 );
+
     (* mark_debug = "true", keep = "true" *) wire [4:0]  test_rom_addr;
     (* mark_debug = "true", keep = "true" *) wire [15:0] test_vector_in;
-
     (* mark_debug = "true", keep = "true" *) wire [4:0]  verify_addr;
     (* mark_debug = "true", keep = "true" *) wire [15:0] verify_vector_out;
     (* mark_debug = "true", keep = "true" *) wire        verify_we;
-
     (* mark_debug = "true", keep = "true" *) wire [19:0] cnt_test;
     (* mark_debug = "true", keep = "true" *) wire        done;
+
     wire [15:0] verify_debug_data;
 
-    assign clk = CLK_50M;
-    assign rst = ~KEY1;
+    // ============================================================
+    // 75 MHz MCU clock generated from 50 MHz board clock
+    // clk_wiz_0 setting:
+    //   clk_in1  = 50 MHz
+    //   clk_out1 = 75 MHz
+    // ============================================================
+
+    wire clk_mcu;
+    wire clk_locked;
+
+    clk_wiz_0 u_clk_wiz_0 (
+        .clk_out1(clk_mcu),
+        .reset(1'b0),
+        .locked(clk_locked),
+        .clk_in1(CLK_50M)
+    );
+
+    // KEY1 is active-low reset.
+    // mcu_top uses active-high rst, so reset while KEY1 is pressed
+    // or while clock wizard is not locked.
+    wire rst = (~KEY1) | (~clk_locked);
 
     test_ROM #(
         .INIT_FILE("mem/test_vector.mem")
     ) u_test_ROM (
-        .clk(clk),
+        .clk(clk_mcu),
         .addr(test_rom_addr),
         .test_vector_in(test_vector_in)
     );
 
     mcu_top u_mcu_top (
-        .clk(clk),
+        .clk(clk_mcu),
         .rst(rst),
         .test_rom_addr(test_rom_addr),
         .test_vector_in(test_vector_in),
@@ -45,16 +64,17 @@ module board_top(
     );
 
     verify_RAM u_verify_RAM (
-        .clk(clk),
+        .clk(clk_mcu),
         .we(verify_we),
         .addr(verify_addr),
         .verify_vector_out(verify_vector_out),
         .debug_addr(verify_addr),
         .debug_data(verify_debug_data)
     );
+
     /*
     ila_probe u_ila_probe (
-        .clk(clk),
+        .clk(clk_mcu),
         .test_vector_in(test_vector_in),
         .verify_vector_out(verify_vector_out),
         .verify_we(verify_we),
@@ -72,4 +92,5 @@ module board_top(
     assign LED6 = cnt_test[12];
     assign LED7 = cnt_test[16];
     assign LED8 = ^verify_debug_data;
+
 endmodule
